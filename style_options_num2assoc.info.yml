@@ -1,0 +1,8 @@
+name: Style Options Num2Assoc
+type: module
+description: 'Style Options Num2Assoc'
+core_version_requirement: ^9 || ^10
+package: 'Style Options'
+dependencies:
+  - style_options
+```

@@ -1,0 +1,5 @@
+<?php
+
+function style_options_num2assoc_execute() {
+  $definitions =  \Drupal::service('style_options.discovery')->getOptionDefinitions();
+}
