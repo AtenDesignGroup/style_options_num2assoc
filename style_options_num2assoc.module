@@ -1,5 +1,105 @@
 <?php
 
+/**
+ * @file
+ * Contains style_options_num2assoc module.
+ */
+
+/**
+ * Update style options from numeric to associative where applicable.
+ *
+ * Requires that updated keys in style definitions have matching indexes and
+ * identical number of items in the options array from previous numeric version.
+ *
+ * # CORRECT example:
+ *
+ * # From:
+ * - foo
+ * - bar
+ * - baz
+ *
+ * # To:
+ * first: 'foo'
+ * second: 'bar'
+ * third: 'baz'
+ *
+ * # INCORRECT example:
+ *
+ * # From:
+ *
+ * - for
+ * - bar
+ * - baz
+ *
+ * # To:
+ * first: foo
+ * third: baz
+ *
+ */
 function style_options_num2assoc_execute() {
   $definitions =  \Drupal::service('style_options.discovery')->getOptionDefinitions();
+  $definitions = array_filter($definitions, function($def) {
+    if (!empty($def['options']) && is_array($def['options'])) {
+      foreach (array_keys($def['options']) as $key) {
+        if (!is_numeric($key)) {
+          return TRUE;
+        }
+      }
+    }
+  });
+  $definitions = array_map(function($def) {
+    return [$def['plugin'] => array_keys($def['options'])];
+  }, $definitions);
+  foreach ($definitions as $id => $definition) {
+    $key_map = reset($definition);
+    // Load all paragraphs that contain the text $id in the text blog behavior field.
+    $query = \Drupal::entityQuery('paragraph')
+      ->condition('behavior_settings', '%"' . $id . '"%', 'LIKE');
+    $ids = $query->execute();
+    /** @var \Drupal\paragraphs\Entity\Paragraph $paragraph */
+    foreach (\Drupal::entityTypeManager()->getStorage('paragraph')->loadMultiple($ids) as $paragraph) {
+      $behavior_settings = $paragraph->getAllBehaviorSettings();
+      // @todo This only checks for style options set on layouts. Do we need
+      // to check on regions as well?
+      if (isset($behavior_settings['layout_paragraphs']['config']['layout'][$id])) {
+        $behavior_settings['layout_paragraphs']['config']['layout'][$id] = _style_options_num2assoc_update_keys($behavior_settings['layout_paragraphs']['config']['layout'][$id], $key_map);
+        $paragraph->setAllBehaviorSettings($behavior_settings);
+        // @todo Translations? QA with Denison to confirm working as expected.
+        $paragraph->save();
+      }
+      if (!empty($behavior_settings['style_options'][$id])) {
+        $behavior_settings['style_options'][$id] = _style_options_num2assoc_update_keys($behavior_settings['style_options'][$id], $key_map);
+        $paragraph->setAllBehaviorSettings($behavior_settings);
+        // @todo Translations? QA with Denison to confirm working as expected.
+        $paragraph->save();
+      }
+
+    }
+  }
+}
+
+/**
+ * Update the keys of the style options array.
+ *
+ * @param array $array
+ *   The style options array.
+ * @param array $key_map
+ *   The key map.
+ *
+ * @return array
+ *  The updated style options array.
+ */
+function _style_options_num2assoc_update_keys($array, $key_map) {
+  $plugin = key($array);
+  $options = $array[$plugin];
+  $new_options = [];
+  foreach ($options as $key => $value) {
+    if (is_numeric($key) && isset($key_map[$key])) {
+      $new_options[$key_map[$key]] = $key_map[$key];
+    }
+    else {
+      $new_options[$key] = $value;
+    }
+  }
+  return [$plugin => $new_options];
 }
