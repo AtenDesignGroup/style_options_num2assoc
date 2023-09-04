@@ -59,19 +59,50 @@ function style_options_num2assoc_execute() {
     /** @var \Drupal\paragraphs\Entity\Paragraph $paragraph */
     foreach (\Drupal::entityTypeManager()->getStorage('paragraph')->loadMultiple($ids) as $paragraph) {
       $behavior_settings = $paragraph->getAllBehaviorSettings();
-      // @todo This only checks for style options set on layouts. Do we need
-      // to check on regions as well?
+
+      // Fix for main layout options.
       if (isset($behavior_settings['layout_paragraphs']['config']['layout'][$id])) {
-        $behavior_settings['layout_paragraphs']['config']['layout'][$id] = _style_options_num2assoc_update_keys($behavior_settings['layout_paragraphs']['config']['layout'][$id], $key_map);
-        $paragraph->setAllBehaviorSettings($behavior_settings);
-        // @todo Translations? QA with Denison to confirm working as expected.
-        $paragraph->save();
+        $old_settings = $behavior_settings['layout_paragraphs']['config']['layout'][$id];
+        $new_settings = _style_options_num2assoc_update_keys($old_settings, $key_map);
+        if ($old_settings != $new_settings) {
+          $behavior_settings['layout_paragraphs']['config']['layout'][$id] = $new_settings;
+          $paragraph->setAllBehaviorSettings($behavior_settings);
+          // @todo Translations? QA with Denison to confirm working as expected.
+          $paragraph->save();
+        }
       }
+
+      // Fix for regions.
+      if (!empty($behavior_settings['layout_paragraphs']['config']['regions'])) {
+        // @todo Fix for regions.
+        foreach ($behavior_settings['layout_paragraphs']['config']['regions'] as $region => $settings) {
+          if (!empty($settings[$id])) {
+            $plugin = key($settings[$id]);
+            if (!empty($settings[$id][$plugin])) {
+              $foo = 'bar';
+              $old_settings = $settings[$id];
+              $new_settings = _style_options_num2assoc_update_keys($old_settings, $key_map);
+              if ($old_settings != $new_settings) {
+                $behavior_settings['layout_paragraphs']['config']['regions'][$region][$id] = $new_settings;
+                $paragraph->setAllBehaviorSettings($behavior_settings);
+                // @todo Translations? QA with Denison to confirm working as expected.
+                $paragraph->save();
+              }
+            }
+          }
+        }
+      }
+
+      // Fix for paragraph styles.
       if (!empty($behavior_settings['style_options'][$id])) {
-        $behavior_settings['style_options'][$id] = _style_options_num2assoc_update_keys($behavior_settings['style_options'][$id], $key_map);
-        $paragraph->setAllBehaviorSettings($behavior_settings);
-        // @todo Translations? QA with Denison to confirm working as expected.
-        $paragraph->save();
+        $old_settings = $behavior_settings['style_options'][$id];
+        $new_settings = _style_options_num2assoc_update_keys($old_settings, $key_map);
+        if ($old_settings != $new_settings) {
+          $behavior_settings['style_options'][$id] = $new_settings;
+          $paragraph->setAllBehaviorSettings($behavior_settings);
+          // @todo Translations? QA with Denison to confirm working as expected.
+          $paragraph->save();
+        }
       }
 
     }
