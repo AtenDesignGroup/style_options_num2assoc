@@ -59,6 +59,7 @@ function style_options_num2assoc_execute() {
     /** @var \Drupal\paragraphs\Entity\Paragraph $paragraph */
     foreach (\Drupal::entityTypeManager()->getStorage('paragraph')->loadMultiple($ids) as $paragraph) {
       $behavior_settings = $paragraph->getAllBehaviorSettings();
+      $save = FALSE;
 
       // Fix for main layout options.
       if (isset($behavior_settings['layout_paragraphs']['config']['layout'][$id])) {
@@ -66,9 +67,8 @@ function style_options_num2assoc_execute() {
         $new_settings = _style_options_num2assoc_update_keys($old_settings, $key_map);
         if ($old_settings != $new_settings) {
           $behavior_settings['layout_paragraphs']['config']['layout'][$id] = $new_settings;
-          $paragraph->setAllBehaviorSettings($behavior_settings);
           // @todo Translations? QA with Denison to confirm working as expected.
-          $paragraph->save();
+          $save = TRUE;
         }
       }
 
@@ -79,14 +79,12 @@ function style_options_num2assoc_execute() {
           if (!empty($settings[$id])) {
             $plugin = key($settings[$id]);
             if (!empty($settings[$id][$plugin])) {
-              $foo = 'bar';
               $old_settings = $settings[$id];
               $new_settings = _style_options_num2assoc_update_keys($old_settings, $key_map);
               if ($old_settings != $new_settings) {
                 $behavior_settings['layout_paragraphs']['config']['regions'][$region][$id] = $new_settings;
-                $paragraph->setAllBehaviorSettings($behavior_settings);
                 // @todo Translations? QA with Denison to confirm working as expected.
-                $paragraph->save();
+                $save = TRUE;
               }
             }
           }
@@ -99,10 +97,14 @@ function style_options_num2assoc_execute() {
         $new_settings = _style_options_num2assoc_update_keys($old_settings, $key_map);
         if ($old_settings != $new_settings) {
           $behavior_settings['style_options'][$id] = $new_settings;
-          $paragraph->setAllBehaviorSettings($behavior_settings);
           // @todo Translations? QA with Denison to confirm working as expected.
-          $paragraph->save();
+          $save = TRUE;
         }
+      }
+
+      if ($save) {
+        $paragraph->setAllBehaviorSettings($behavior_settings);
+        $paragraph->save();
       }
 
     }
