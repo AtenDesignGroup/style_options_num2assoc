@@ -6,6 +6,13 @@
  */
 
 /**
+ * Implements hook_install().
+ */
+function style_options_num2assoc_install() {
+  style_options_num2assoc_execute();
+}
+
+/**
  * Update style options from numeric to associative where applicable.
  *
  * Requires that updated keys in style definitions have matching indexes and
